@@ -842,7 +842,13 @@ export default function LibraryNightBusApp() {
           font-weight: 950;
           letter-spacing: -0.055em;
         }
+.hero-title-break {
+  display: block;
+}
 
+.hero-title-second {
+  display: inline;
+}
         .hero p {
           position: relative;
           z-index: 1;
@@ -1631,6 +1637,27 @@ export default function LibraryNightBusApp() {
           .route-choice-grid { grid-template-columns: repeat(2, 1fr); }
           .stop-list { grid-template-columns: 1fr 1fr; max-height: none; }
         }
+        .hero {
+  text-align: center;
+  align-items: center;
+}
+
+.hero p {
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.hero-title-break {
+  display: none;
+}
+
+.hero-title-second {
+  margin-left: 0.18em;
+}
+
+.hero h1 {
+  white-space: nowrap;
+}
 
         @media (min-width: 1024px) {
           .topbar-inner {
@@ -1731,7 +1758,11 @@ export default function LibraryNightBusApp() {
       <div className="container">
         <section className="hero">
           <span className="hero-kicker">{busInfo.eventLabel}</span>
-          <h1>{busInfo.heroTitleLine1}<br />{busInfo.heroTitleLine2}</h1>
+          <h1>
+            {busInfo.heroTitleLine1}
+            <br className="hero-title-break" />
+            <span className="hero-title-second">{busInfo.heroTitleLine2}</span>
+          </h1>
           <p>{busInfo.heroDescription}</p>
         </section>
 
