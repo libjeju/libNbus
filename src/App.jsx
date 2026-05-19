@@ -144,19 +144,83 @@ function getServiceSummary(dateString) {
 }
 
 
-function getTodayString() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
+function getDateStringFromDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
   return `${year}-${month}-${day}`;
 }
 
-function getDepartureDateTime(dateString, timeString) {
+function getTodayString() {
+  return getDateStringFromDate(new Date());
+}
+
+function addDays(dateString, days) {
+  const date = new Date(`${dateString}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return getDateStringFromDate(date);
+}
+
+function getTimeParts(timeString) {
   const [hour, minute] = timeString.split(":").map(Number);
-  const departure = new Date(`${dateString}T00:00:00`);
+  return { hour, minute };
+}
+
+function getDepartureDayOffset(timeString) {
+  const { hour } = getTimeParts(timeString);
+
+  // 00:05, 01:05, 02:05처럼 새벽에 출발하는 차는
+  // 이용자 입장에서 "전날 밤 운행"으로 이해하는 것이 자연스럽습니다.
+  return hour < 6 ? 1 : 0;
+}
+
+function getActualDepartureDate(serviceDateString, timeString) {
+  return addDays(serviceDateString, getDepartureDayOffset(timeString));
+}
+
+function getDepartureDateTime(serviceDateString, timeString) {
+  const { hour, minute } = getTimeParts(timeString);
+  const actualDate = getActualDepartureDate(serviceDateString, timeString);
+  const departure = new Date(`${actualDate}T00:00:00`);
   departure.setHours(hour, minute, 0, 0);
   return departure;
+}
+
+function formatMinute(minute) {
+  return minute === 0 ? "" : ` ${minute}분`;
+}
+
+function getRelativeNightLabel(serviceDateString) {
+  const today = getTodayString();
+  const tomorrow = addDays(today, 1);
+
+  if (serviceDateString === today) return "오늘 밤";
+  if (serviceDateString === tomorrow) return "내일 밤";
+
+  return `${toShortDate(serviceDateString)} 밤`;
+}
+
+function formatFriendlyDepartureTime(serviceDateString, timeString) {
+  const { hour, minute } = getTimeParts(timeString);
+  const actualDate = getActualDepartureDate(serviceDateString, timeString);
+
+  if (hour === 0) {
+    return `${getRelativeNightLabel(serviceDateString)} 12시${formatMinute(minute)}`;
+  }
+
+  if (hour < 6) {
+    return `${toShortDate(actualDate)} 새벽 ${hour}시${formatMinute(minute)}`;
+  }
+
+  return `${toShortDate(actualDate)} ${hour}시${formatMinute(minute)}`;
+}
+
+function formatActualDepartureLabel(serviceDateString, timeString) {
+  return `${toShortDate(getActualDepartureDate(serviceDateString, timeString))} ${timeString} 출발`;
+}
+
+function formatNightServiceLabel(serviceDateString) {
+  return `${toShortDate(serviceDateString)} 밤 운행`;
 }
 
 function formatRemainingTime(departureDateTime) {
@@ -168,33 +232,44 @@ function formatRemainingTime(departureDateTime) {
   const minutes = totalMinutes % 60;
 
   if (hours > 0) {
-    return `약 ${hours}시간 ${minutes}분 후`;
+    return minutes > 0 ? `출발까지 약 ${hours}시간 ${minutes}분` : `출발까지 약 ${hours}시간`;
   }
 
-  return `약 ${minutes}분 후`;
+  return `출발까지 약 ${minutes}분`;
 }
 
 function getNextDeparture(dateString, scheduleItems) {
   if (!scheduleItems.length) return null;
 
-  const todayString = getTodayString();
-
-  if (dateString < todayString) return null;
-
   const departures = scheduleItems
     .map((item) => ({
       ...item,
+      serviceDate: dateString,
+      actualDepartureDate: getActualDepartureDate(dateString, item.time),
       departureDateTime: getDepartureDateTime(dateString, item.time),
+      friendlyTime: formatFriendlyDepartureTime(dateString, item.time),
+      actualLabel: formatActualDepartureLabel(dateString, item.time),
+      nightLabel: formatNightServiceLabel(dateString),
     }))
     .sort((a, b) => a.departureDateTime - b.departureDateTime);
-
-  if (dateString > todayString) return departures[0];
 
   return departures.find((item) => item.departureDateTime.getTime() >= Date.now()) || null;
 }
 
 function getNextServiceDate(dateString) {
   return getServiceDates().find((serviceDate) => serviceDate > dateString) || null;
+}
+
+function getSmartDefaultDate() {
+  const serviceDates = getServiceDates();
+  const today = getTodayString();
+
+  if (schedule[today]) return today;
+
+  const futureDate = serviceDates.find((dateString) => dateString > today);
+  if (futureDate) return futureDate;
+
+  return getDefaultDate();
 }
 
 function isAdminMode() {
@@ -257,11 +332,11 @@ function DateScroller({ selectedDate, setSelectedDate }) {
   }
 
   return (
-    <section className="date-strip" aria-label="운행일 빠른 선택">
+    <section className="date-strip" aria-label="밤 운행일 빠른 선택">
       <div className="section-head compact">
         <div>
-          <p>운행일</p>
-          <h2>날짜 선택</h2>
+          <p>밤 운행일</p>
+          <h2>오늘 공부하고 귀가할 날짜를 선택하세요</h2>
         </div>
       </div>
 
@@ -287,7 +362,7 @@ function DateScroller({ selectedDate, setSelectedDate }) {
                 type="button"
                 onClick={() => setSelectedDate(dateString)}
                 className={`date-pill ${selected ? "selected" : ""}`}
-                aria-label={`${toKoreanDate(dateString)} 선택`}
+                aria-label={`${toKoreanDate(dateString)} 밤 운행 선택`}
               >
                 <span
                   className={`date-week ${dayIndex === 0 ? "sun" : dayIndex === 6 ? "sat" : ""}`}
@@ -295,7 +370,7 @@ function DateScroller({ selectedDate, setSelectedDate }) {
                   {dayLabels[dayIndex]}
                 </span>
                 <strong>{day}</strong>
-                {notesByDate[dateString] ? <em>{notesByDate[dateString]}</em> : null}
+                <em>{notesByDate[dateString] || "밤 운행"}</em>
               </button>
             );
           })}
@@ -357,7 +432,7 @@ function MonthMiniCalendar({ selectedDate, setSelectedDate }) {
               type="button"
               onClick={() => setSelectedDate(dateString)}
               className={`calendar-day ${hasService ? "service" : ""} ${selected ? "selected" : ""}`}
-              aria-label={`${toKoreanDate(dateString)} ${hasService ? "운행 있음" : "운행 없음"}`}
+              aria-label={`${toKoreanDate(dateString)} ${hasService ? "밤 운행 있음" : "밤 운행 없음"}`}
             >
               {day}
             </button>
@@ -366,7 +441,7 @@ function MonthMiniCalendar({ selectedDate, setSelectedDate }) {
       </div>
 
       <div className="calendar-legend">
-        <span><i className="legend-service" />운행일</span>
+        <span><i className="legend-service" />밤 운행일</span>
         <span><i className="legend-selected" />선택일</span>
       </div>
     </details>
@@ -427,11 +502,12 @@ function TodaySummary({
   const selectedRouteHasTimes = visibleTimes.length > 0;
 
   return (
-    <section className={`summary-card ${!hasService ? "no-service" : ""}`} aria-label="선택 날짜 운행 요약">
+    <section className={`summary-card ${!hasService ? "no-service" : ""}`} aria-label="선택한 밤 운행 요약">
       <div className="summary-top">
         <div>
-          <p className="eyebrow">선택한 날짜</p>
-          <h1>{toShortDate(selectedDate)}</h1>
+          <p className="eyebrow">선택한 밤 운행일</p>
+          <h1>{formatNightServiceLabel(selectedDate)}</h1>
+          <span className="night-helper">자정을 넘긴 00:05 출발편도 이 날짜의 밤 운행으로 표시합니다.</span>
           {notesByDate[selectedDate] ? (
             <span className="note-chip">{notesByDate[selectedDate]}</span>
           ) : null}
@@ -445,17 +521,32 @@ function TodaySummary({
 
       {hasService ? (
         <div className="next-departure-card" aria-live="polite">
-          <div>
+          <div className="next-main">
             <p>다음 출발</p>
             {nextDeparture ? (
               <>
-                <strong>{nextDeparture.time}</strong>
-                <span>{nextDeparture.routes.join(" · ")}노선 · {formatRemainingTime(nextDeparture.departureDateTime)}</span>
+                <strong>{nextDeparture.friendlyTime}</strong>
+                <span className="actual-departure">{nextDeparture.actualLabel}</span>
+                <span className="remain-time">{formatRemainingTime(nextDeparture.departureDateTime)}</span>
+
+                <div className="next-info-grid" aria-label="다음 출발 상세 정보">
+                  <div>
+                    <small>운행 노선</small>
+                    <b>{nextDeparture.routes.join(" · ")}노선</b>
+                  </div>
+                  <div>
+                    <small>탑승 위치</small>
+                    <b>{busInfo.boardingPlace}</b>
+                  </div>
+                </div>
               </>
             ) : (
               <>
-                <strong>운행 종료</strong>
-                <span>선택한 날짜의 남은 출발편이 없습니다.</span>
+                <strong>오늘 밤 운행 종료</strong>
+                <span className="actual-departure">선택한 밤 운행일의 남은 출발편이 없습니다.</span>
+                {nextServiceDate ? (
+                  <span className="remain-time">다음 운행: {formatNightServiceLabel(nextServiceDate)}</span>
+                ) : null}
               </>
             )}
           </div>
@@ -466,9 +557,9 @@ function TodaySummary({
         </div>
       ) : (
         <div className="no-service-box" aria-live="polite">
-          <strong>이날은 야간버스가 운행하지 않습니다.</strong>
-          <span>다른 운행일을 선택해 주세요.</span>
-          {nextServiceDate ? <em>다음 운행일: {toKoreanDate(nextServiceDate)}</em> : null}
+          <strong>이날 밤에는 야간버스가 운행하지 않습니다.</strong>
+          <span>공부하고 귀가할 날짜를 기준으로 다른 밤 운행일을 선택해 주세요.</span>
+          {nextServiceDate ? <em>다음 밤 운행일: {formatNightServiceLabel(nextServiceDate)}</em> : null}
         </div>
       )}
 
@@ -501,6 +592,8 @@ function TodaySummary({
               <div>
                 <p>출발</p>
                 <strong>{item.time}</strong>
+                <em>{formatFriendlyDepartureTime(selectedDate, item.time)}</em>
+                <small>{formatActualDepartureLabel(selectedDate, item.time)}</small>
               </div>
 
               <div className="time-route-chips">
@@ -511,9 +604,9 @@ function TodaySummary({
             </article>
           ))
         ) : hasService ? (
-          <div className="empty-box">선택한 노선은 이날 운행하지 않습니다. 다른 노선을 선택해 주세요.</div>
+          <div className="empty-box">선택한 노선은 이날 밤 운행하지 않습니다. 다른 노선을 선택해 주세요.</div>
         ) : (
-          <div className="empty-box warning">이 날짜에는 표시할 출발 시간이 없습니다.</div>
+          <div className="empty-box warning">이 날짜 밤에는 표시할 출발 시간이 없습니다.</div>
         )}
       </div>
     </section>
@@ -562,7 +655,7 @@ function RouteDetail({ selectedRoute, selectedDate, setSelectedRoute, availableR
 
         <div className="route-time-mini">
           <span>출발</span>
-          <strong>{times.length ? times.map((item) => item.time).join(" · ") : "없음"}</strong>
+          <strong>{times.length ? times.map((item) => formatActualDepartureLabel(selectedDate, item.time)).join(" · ") : "없음"}</strong>
         </div>
       </div>
 
@@ -601,7 +694,7 @@ function TestPanel({ tests }) {
 }
 
 export default function LibraryNightBusApp() {
-  const [selectedDate, setSelectedDate] = useState(getDefaultDate());
+  const [selectedDate, setSelectedDate] = useState(getSmartDefaultDate());
   const [selectedRoute, setSelectedRoute] = useState("all");
   const [stopQuery, setStopQuery] = useState("");
 
@@ -617,7 +710,16 @@ export default function LibraryNightBusApp() {
   const nextServiceDate = useMemo(() => getNextServiceDate(selectedDate), [selectedDate]);
 
   async function handleShare() {
-    const text = `${busInfo.title}\n${toKoreanDate(selectedDate)}\n${getServiceSummary(selectedDate)}\n탑승 위치: ${busInfo.boardingPlace}`;
+    const shareLines = [
+      busInfo.title,
+      formatNightServiceLabel(selectedDate),
+      nextDeparture
+        ? `다음 출발: ${nextDeparture.friendlyTime} (${nextDeparture.actualLabel})`
+        : "남은 출발편 없음",
+      `운행 정보: ${getServiceSummary(selectedDate)}`,
+      `탑승 위치: ${busInfo.boardingPlace}`,
+    ];
+    const text = shareLines.join("\n");
     const shareData = {
       title: busInfo.title,
       text,
@@ -823,6 +925,12 @@ export default function LibraryNightBusApp() {
           font-weight: 650;
         }
 
+        .secondary-hero {
+          margin-top: 14px;
+          margin-bottom: 18px;
+          background: radial-gradient(circle at 85% 8%, rgba(0,102,204,.10), transparent 34%), #ffffff;
+        }
+
         .date-strip {
           margin-top: 8px;
           overflow: hidden;
@@ -910,9 +1018,9 @@ export default function LibraryNightBusApp() {
         }
 
         .date-pill {
-          flex: 0 0 66px;
-          min-width: 66px;
-          min-height: 82px;
+          flex: 0 0 74px;
+          min-width: 74px;
+          min-height: 92px;
           border: 2px solid #c7d7ff;
           border-radius: 20px;
           background: #eaf1ff;
@@ -945,8 +1053,8 @@ export default function LibraryNightBusApp() {
         .date-pill em {
           margin-top: 2px;
           font-style: normal;
-          font-size: 9px;
-          font-weight: 800;
+          font-size: 10px;
+          font-weight: 900;
           color: inherit;
         }
 
@@ -1140,6 +1248,17 @@ export default function LibraryNightBusApp() {
           letter-spacing: -0.05em;
         }
 
+        .night-helper {
+          display: block;
+          margin-top: 8px;
+          max-width: 440px;
+          color: var(--muted);
+          font-size: 13px;
+          line-height: 1.4;
+          font-weight: 800;
+          word-break: keep-all;
+        }
+
         .note-chip {
           display: inline-flex;
           margin-top: 9px;
@@ -1153,14 +1272,19 @@ export default function LibraryNightBusApp() {
 
         .next-departure-card {
           margin-top: 16px;
-          border-radius: 22px;
-          background: #eef5ff;
+          border-radius: 26px;
+          background: linear-gradient(135deg, #eef5ff 0%, #ffffff 100%);
           border: 1px solid #b8d3ff;
-          padding: 15px;
+          padding: 16px;
           display: grid;
           grid-template-columns: 1fr auto;
           gap: 12px;
-          align-items: center;
+          align-items: start;
+          box-shadow: inset 0 1px 0 rgba(255,255,255,.7);
+        }
+
+        .next-main {
+          min-width: 0;
         }
 
         .next-departure-card p {
@@ -1174,10 +1298,11 @@ export default function LibraryNightBusApp() {
           display: block;
           margin-top: 4px;
           color: var(--ink);
-          font-size: 30px;
-          line-height: 1;
+          font-size: clamp(28px, 7vw, 42px);
+          line-height: 1.04;
           font-weight: 950;
-          letter-spacing: -0.05em;
+          letter-spacing: -0.055em;
+          word-break: keep-all;
         }
 
         .next-departure-card span {
@@ -1187,6 +1312,53 @@ export default function LibraryNightBusApp() {
           font-size: 14px;
           line-height: 1.35;
           font-weight: 800;
+        }
+
+        .actual-departure {
+          color: #26324a !important;
+        }
+
+        .remain-time {
+          display: inline-flex !important;
+          width: fit-content;
+          border-radius: 999px;
+          background: #dfeeff;
+          color: var(--blue) !important;
+          padding: 7px 10px;
+          font-size: 13px !important;
+          font-weight: 950 !important;
+        }
+
+        .next-info-grid {
+          margin-top: 14px;
+          display: grid;
+          grid-template-columns: 1fr;
+          gap: 8px;
+        }
+
+        .next-info-grid div {
+          border-radius: 18px;
+          background: rgba(255,255,255,.78);
+          border: 1px solid rgba(184,211,255,.8);
+          padding: 11px 12px;
+        }
+
+        .next-info-grid small {
+          display: block;
+          color: var(--muted);
+          font-size: 11px;
+          line-height: 1.2;
+          font-weight: 900;
+        }
+
+        .next-info-grid b {
+          display: block;
+          margin-top: 3px;
+          color: var(--ink);
+          font-size: 15px;
+          line-height: 1.25;
+          font-weight: 950;
+          word-break: keep-all;
         }
 
         .share-button {
@@ -1331,6 +1503,27 @@ export default function LibraryNightBusApp() {
           line-height: 1;
           font-weight: 950;
           letter-spacing: -0.05em;
+        }
+
+        .time-card em,
+        .time-card small {
+          display: block;
+          margin-top: 5px;
+          font-style: normal;
+          line-height: 1.3;
+          word-break: keep-all;
+        }
+
+        .time-card em {
+          color: var(--blue);
+          font-size: 13px;
+          font-weight: 950;
+        }
+
+        .time-card small {
+          color: var(--muted);
+          font-size: 12px;
+          font-weight: 800;
         }
 
         .time-route-chips {
@@ -1589,6 +1782,7 @@ export default function LibraryNightBusApp() {
           }
 
           .summary-card { margin-top: 14px; }
+          .next-info-grid { grid-template-columns: 1fr 1fr; }
           .route-card { grid-column: 1 / -1; }
           .route-choice-grid { grid-template-columns: repeat(2, 1fr); }
           .stop-list { grid-template-columns: 1fr 1fr; max-height: none; }
@@ -1680,7 +1874,7 @@ export default function LibraryNightBusApp() {
             type="button"
             className="top-reset"
             onClick={() => {
-              setSelectedDate(getDefaultDate());
+              setSelectedDate(getSmartDefaultDate());
               setSelectedRoute("all");
               setStopQuery("");
             }}
@@ -1691,7 +1885,19 @@ export default function LibraryNightBusApp() {
       </header>
 
       <div className="container">
-        <section className="hero">
+        <TodaySummary
+          selectedDate={selectedDate}
+          selectedRoute={selectedRoute}
+          setSelectedRoute={setSelectedRoute}
+          visibleTimes={visibleTimes}
+          availableRoutes={availableRoutes}
+          hasService={hasService}
+          nextDeparture={nextDeparture}
+          nextServiceDate={nextServiceDate}
+          onShare={handleShare}
+        />
+
+        <section className="hero secondary-hero">
           <span className="hero-kicker">{busInfo.eventLabel}</span>
           <h1>{busInfo.heroTitleLine1}<br />{busInfo.heroTitleLine2}</h1>
           <p>{busInfo.heroDescription}</p>
@@ -1708,30 +1914,16 @@ export default function LibraryNightBusApp() {
           setSelectedRoute={setSelectedRoute}
         />
 
-        <div className="mobile-grid">
-          <TodaySummary
-            selectedDate={selectedDate}
-            selectedRoute={selectedRoute}
-            setSelectedRoute={setSelectedRoute}
-            visibleTimes={visibleTimes}
-            availableRoutes={availableRoutes}
-            hasService={hasService}
-            nextDeparture={nextDeparture}
-            nextServiceDate={nextServiceDate}
-            onShare={handleShare}
-          />
-
-          <RouteDetail
-            selectedRoute={selectedRoute}
-            selectedDate={selectedDate}
-            setSelectedRoute={setSelectedRoute}
-            availableRoutes={availableRoutes}
-          />
-        </div>
+        <RouteDetail
+          selectedRoute={selectedRoute}
+          selectedDate={selectedDate}
+          setSelectedRoute={setSelectedRoute}
+          availableRoutes={availableRoutes}
+        />
 
         <p className="guide">
-          탑승 위치는 {busInfo.boardingPlace}입니다. 출발 시간은 중앙도서관 기준이며,
-          교통 상황에 따라 정류장 도착 시간은 달라질 수 있습니다.
+          탑승 위치는 {busInfo.boardingPlace}입니다. 화면의 날짜는 공부하고 귀가하는 밤 기준입니다. 00:05처럼 자정을 넘긴 시간은 다음날 새벽 실제 출발 시간도 함께 표시합니다.
+          출발 시간은 중앙도서관 기준이며, 교통 상황에 따라 정류장 도착 시간은 달라질 수 있습니다.
         </p>
       </div>
 
