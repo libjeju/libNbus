@@ -25,16 +25,23 @@ jobs:
 
     steps:
       - name: Checkout
-        uses: actions/checkout@v6
+        uses: actions/checkout@v4
 
       - name: Set up Node
-        uses: actions/setup-node@v6
+        uses: actions/setup-node@v4
         with:
-          node-version: 24
-          cache: npm
+          node-version: 22.12.0
+
+      - name: Show versions
+        run: |
+          node -v
+          npm -v
+
+      - name: Clean npm cache
+        run: npm cache clean --force
 
       - name: Install dependencies
-        run: npm install
+        run: npm install --no-audit --no-fund
 
       - name: Build
         run: npm run build
