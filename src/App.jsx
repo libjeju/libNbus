@@ -119,6 +119,36 @@ function toShortDate(dateString) {
   return `${date.getMonth() + 1}/${date.getDate()}(${dayLabels[date.getDay()]})`;
 }
 
+function getDateStringFromDate(date) {
+  const year = date.getFullYear();
+  const month = String(date.getMonth() + 1).padStart(2, "0");
+  const day = String(date.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
+function addDays(dateString, days) {
+  const date = new Date(`${dateString}T00:00:00`);
+  date.setDate(date.getDate() + days);
+  return getDateStringFromDate(date);
+}
+
+function getDepartureDayOffset(timeString) {
+  const hour = Number(timeString.split(":")[0]);
+
+  // 00:05, 01:05, 02:05처럼 자정을 넘긴 새벽 출발편은
+  // 선택한 날짜의 다음날 실제 출발로 표시합니다.
+  return hour < 6 ? 1 : 0;
+}
+
+function getActualDepartureDate(dateString, timeString) {
+  return addDays(dateString, getDepartureDayOffset(timeString));
+}
+
+function formatActualDepartureLabel(dateString, timeString) {
+  const actualDate = new Date(`${getActualDepartureDate(dateString, timeString)}T00:00:00`);
+  return `${actualDate.getMonth() + 1}월 ${actualDate.getDate()}일(${dayLabels[actualDate.getDay()]}) ${timeString}`;
+}
+
 function getDefaultDate() {
   return schedule[busInfo.defaultDate] ? busInfo.defaultDate : getServiceStartDate();
 }
@@ -139,22 +169,19 @@ function getServiceSummary(dateString) {
   const items = schedule[dateString] || [];
   if (!items.length) return "운행 정보가 없습니다.";
   return items
-    .map((item) => `${item.time} · ${item.routes.join("·")}노선`)
+    .map((item) => `${formatActualDepartureLabel(dateString, item.time)} · ${item.routes.join("·")}노선`)
     .join(" / ");
 }
 
 
 function getTodayString() {
-  const now = new Date();
-  const year = now.getFullYear();
-  const month = String(now.getMonth() + 1).padStart(2, "0");
-  const day = String(now.getDate()).padStart(2, "0");
-  return `${year}-${month}-${day}`;
+  return getDateStringFromDate(new Date());
 }
 
 function getDepartureDateTime(dateString, timeString) {
   const [hour, minute] = timeString.split(":").map(Number);
-  const departure = new Date(`${dateString}T00:00:00`);
+  const actualDate = getActualDepartureDate(dateString, timeString);
+  const departure = new Date(`${actualDate}T00:00:00`);
   departure.setHours(hour, minute, 0, 0);
   return departure;
 }
@@ -562,7 +589,11 @@ function RouteDetail({ selectedRoute, selectedDate, setSelectedRoute, availableR
 
         <div className="route-time-mini">
           <span>출발</span>
-          <strong>{times.length ? times.map((item) => item.time).join(" · ") : "없음"}</strong>
+          <strong>
+            {times.length
+              ? times.map((item) => formatActualDepartureLabel(selectedDate, item.time)).join(" · ")
+              : "없음"}
+          </strong>
         </div>
       </div>
 
@@ -1447,6 +1478,9 @@ export default function LibraryNightBusApp() {
           color: var(--blue);
           font-size: 16px;
           font-weight: 950;
+          line-height: 1.35;
+          text-align: right;
+          word-break: keep-all;
         }
 
         .stop-list {
@@ -1462,31 +1496,35 @@ export default function LibraryNightBusApp() {
 
         .stop-list li {
           display: grid;
-          grid-template-columns: 32px 1fr;
+          grid-template-columns: 44px minmax(0, 1fr);
           align-items: center;
-          gap: 10px;
+          gap: 14px;
           border-radius: 16px;
           background: var(--soft);
-          padding: 10px 12px;
+          padding: 10px 14px;
         }
 
         .stop-list li span {
-          width: 44px;
-          height: 44px;
+          width: 38px;
+          height: 38px;
           display: inline-flex;
           align-items: center;
           justify-content: center;
+          justify-self: center;
           border-radius: 999px;
           background: #fff;
           color: var(--blue);
           font-size: 12px;
           font-weight: 950;
+          box-shadow: 0 2px 8px rgba(0,0,0,.04);
         }
 
         .stop-list li strong {
           font-size: 15px;
           font-weight: 800;
           line-height: 1.35;
+          word-break: keep-all;
+          padding-left: 2px;
         }
 
         .guide {
