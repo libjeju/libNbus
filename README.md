@@ -11,7 +11,7 @@ https://깃허브아이디.github.io/저장소이름/
 예:
 
 ```text
-https://library-account.github.io/libNbus/
+https://libjeju.github.io/libNbus/
 ```
 
 ---
