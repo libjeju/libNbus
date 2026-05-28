@@ -837,27 +837,30 @@ export default function LibraryNightBusApp() {
           font-weight: 800;
         }
 
-        .hero h1 {
-          position: relative;
-          z-index: 1;
-          margin: 14px 0 0;
-          font-size: clamp(34px, 9vw, 50px);
-          line-height: 1.05;
-          font-weight: 950;
-          letter-spacing: -0.055em;
-          white-space: normal;
-          word-break: keep-all;
-          overflow-wrap: normal;
-        }
+.hero h1 {
+  position: relative;
+  z-index: 1;
+  display: inline-block;
+  margin: 14px 0 0;
+  font-size: clamp(34px, 9vw, 50px);
+  line-height: 1.08;
+  font-weight: 950;
+  letter-spacing: -0.055em;
+  white-space: normal;
+  word-break: keep-all;
+  overflow-wrap: normal;
+  text-align: left;
+}
 
-        .hero-title-break {
-          display: block;
-        }
+.hero-title-break {
+  display: block;
+}
 
-        .hero-title-second {
-          display: inline;
-          margin-left: 0;
-        }
+.hero-title-second {
+  display: block;
+  margin-left: 0;
+  margin-top: 0.12em;
+}
 
         .hero p {
           position: relative;
