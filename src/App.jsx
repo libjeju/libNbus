@@ -1,3 +1,4 @@
+```jsx
 import React, { useMemo, useRef, useState } from "react";
 
 import busInfo from "./data/busInfo.json";
@@ -172,7 +173,6 @@ function getServiceSummary(dateString) {
     .map((item) => `${formatActualDepartureLabel(dateString, item.time)} · ${item.routes.join("·")}노선`)
     .join(" / ");
 }
-
 
 function getTodayString() {
   return getDateStringFromDate(new Date());
@@ -641,10 +641,12 @@ export default function LibraryNightBusApp() {
   const availableRoutes = getAvailableRoutesByDate(selectedDate);
   const tests = useMemo(() => runDataTests(), []);
   const showAdminPanel = isAdminMode();
+
   const nextDeparture = useMemo(
     () => getNextDeparture(selectedDate, selectedDaySchedule),
     [selectedDate, selectedDaySchedule]
   );
+
   const nextServiceDate = useMemo(() => getNextServiceDate(selectedDate), [selectedDate]);
 
   async function handleShare() {
@@ -805,6 +807,8 @@ export default function LibraryNightBusApp() {
           border: 1px solid rgba(0,0,0,.06);
           box-shadow: var(--shadow);
           overflow: hidden;
+          text-align: center;
+          align-items: center;
         }
 
         .hero::after {
@@ -841,18 +845,24 @@ export default function LibraryNightBusApp() {
           line-height: 1.05;
           font-weight: 950;
           letter-spacing: -0.055em;
+          white-space: normal;
+          word-break: keep-all;
+          overflow-wrap: normal;
         }
-.hero-title-break {
-  display: block;
-}
 
-.hero-title-second {
-  display: inline;
-}
+        .hero-title-break {
+          display: block;
+        }
+
+        .hero-title-second {
+          display: inline;
+          margin-left: 0;
+        }
+
         .hero p {
           position: relative;
           z-index: 1;
-          margin: 12px 0 0;
+          margin: 12px auto 0;
           max-width: 520px;
           color: var(--muted);
           font-size: 16px;
@@ -1637,27 +1647,6 @@ export default function LibraryNightBusApp() {
           .route-choice-grid { grid-template-columns: repeat(2, 1fr); }
           .stop-list { grid-template-columns: 1fr 1fr; max-height: none; }
         }
-        .hero {
-  text-align: center;
-  align-items: center;
-}
-
-.hero p {
-  margin-left: auto;
-  margin-right: auto;
-}
-
-.hero-title-break {
-  display: none;
-}
-
-.hero-title-second {
-  margin-left: 0.18em;
-}
-
-.hero h1 {
-  white-space: nowrap;
-}
 
         @media (min-width: 1024px) {
           .topbar-inner {
@@ -1679,6 +1668,14 @@ export default function LibraryNightBusApp() {
 
           .hero h1 {
             font-size: 52px;
+          }
+
+          .hero-title-break {
+            display: none;
+          }
+
+          .hero-title-second {
+            margin-left: 0.18em;
           }
 
           .hero p {
@@ -1808,3 +1805,4 @@ export default function LibraryNightBusApp() {
     </main>
   );
 }
+```
