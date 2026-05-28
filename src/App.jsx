@@ -1,6 +1,5 @@
 
-import React, { useMemo, useRef, useState } from "react";
-
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import busInfo from "./data/busInfo.json";
 import routeList from "./data/routes.json";
 import scheduleData from "./data/schedule.json";
@@ -266,6 +265,15 @@ function runDataTests() {
 function DateScroller({ selectedDate, setSelectedDate }) {
   const serviceDates = getServiceDates();
   const scrollRef = useRef(null);
+  const selectedButtonRef = useRef(null);
+
+  useEffect(() => {
+    selectedButtonRef.current?.scrollIntoView({
+      behavior: "smooth",
+      inline: "center",
+      block: "nearest",
+    });
+  }, [selectedDate]);
 
   function moveDateScroll(direction) {
     scrollRef.current?.scrollBy({ left: direction * 320, behavior: "smooth" });
@@ -311,6 +319,7 @@ function DateScroller({ selectedDate, setSelectedDate }) {
             return (
               <button
                 key={dateString}
+                ref={selected ? selectedButtonRef : null}
                 type="button"
                 onClick={() => setSelectedDate(dateString)}
                 className={`date-pill ${selected ? "selected" : ""}`}
