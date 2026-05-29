@@ -1687,6 +1687,7 @@ export default function LibraryNightBusApp() {
           }
 
           .hero-title-second {
+            display: inline;
             margin-left: 0.18em;
             margin-top: 0;
           }
