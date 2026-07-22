@@ -210,7 +210,24 @@ https://깃허브아이디.github.io/저장소이름/?admin=1
 
 ---
 
-## 8. 배포 방식
+## 8. 비개발자용 운영자 편집 화면
+
+아래 주소에서는 코드를 직접 고치지 않고 입력란과 체크박스로 정보를 수정할 수 있습니다.
+
+```text
+https://libjeju.github.io/libNbus/admin/
+```
+
+저장 방법은 두 가지입니다.
+
+1. JSON 파일 3개를 내려받아 GitHub에 업로드
+2. GitHub Fine-grained personal access token으로 `src/data`에 바로 저장
+
+바로 저장하려면 토큰에 이 저장소의 `Contents: Read and write` 권한만 부여하는 것을 권장합니다. 토큰은 페이지나 브라우저 저장소에 보관되지 않으며, 저장 후 입력란에서도 삭제됩니다.
+
+---
+
+## 9. 배포 방식
 
 이 프로젝트는 GitHub Actions로 자동 배포됩니다.
 
@@ -221,7 +238,7 @@ https://깃허브아이디.github.io/저장소이름/?admin=1
 
 ---
 
-## 9. 수정 후 확인 순서
+## 10. 수정 후 확인 순서
 
 1. GitHub에서 파일 수정
 2. `Commit changes` 클릭
@@ -238,7 +255,7 @@ https://깃허브아이디.github.io/저장소이름/?v=2
 
 ---
 
-## 10. 자주 나는 오류
+## 11. 자주 나는 오류
 
 | 증상 | 원인 | 해결 |
 |---|---|---|
@@ -249,7 +266,7 @@ https://깃허브아이디.github.io/저장소이름/?v=2
 
 ---
 
-## 11. 기술 정보
+## 12. 기술 정보
 
 - React: 19.2.6
 - React DOM: 19.2.6
@@ -259,6 +276,6 @@ https://깃허브아이디.github.io/저장소이름/?v=2
 
 ---
 
-## 12. 한 줄 요약
+## 13. 한 줄 요약
 
 운영자는 `src/data/busInfo.json`, `src/data/routes.json`, `src/data/schedule.json`만 수정하면 됩니다. 수정 후 GitHub Actions가 자동으로 웹사이트를 다시 배포합니다.
